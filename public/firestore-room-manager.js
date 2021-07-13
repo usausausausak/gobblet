@@ -6,8 +6,8 @@ import {
 import { assert, assertNot, randomId, vaildId, delay, TimeoutError, timeout } from './util.js';
 
 class RemotePlayerManager {
-  constructor(roomDocId, db, listener, timeoutSecond = 60) {
-    this.roomDocId = roomDocId;
+  constructor(stepsRef, db, listener, timeoutSecond = 60) {
+    this.stepsRef = stepsRef;
     this.timeoutTime = timeoutSecond * 1000;
 
     this.db = db;
@@ -15,8 +15,7 @@ class RemotePlayerManager {
   }
 
   async recvStep(step) {
-    const stepsRef = this.db.collection(`room/${this.roomDocId}/step`);
-    await stepsRef.doc(`step-${step.seq}`).set(step);
+    await this.stepsRef.doc(`step-${step.seq}`).set(step);
   }
 
   async getStep(controller) {
@@ -46,8 +45,8 @@ class RemotePlayerManager {
 }
 
 class ViewerPlayerManager extends RemotePlayerManager {
-  constructor(roomDocId, db, listener) {
-    super(roomDocId, db, listener, 0);
+  constructor(stepsRef, db, listener) {
+    super(stepsRef, db, listener, 0);
   }
 
   async recvStep(step) {
@@ -59,11 +58,12 @@ class RemoteRoomManager {
   constructor(defaultPlayerAFactory, db, listener) {
     this.defaultPlayerAFactory = defaultPlayerAFactory;
 
-    this.room = undefined;
+    this.room     = undefined;
 
-    this.roomRef = undefined;
+    this.roomRef  = undefined;
+    this.stepsRef = undefined;
 
-    this.db = db;
+    this.db       = db;
     this.listener = listener;
   }
 
@@ -71,19 +71,21 @@ class RemoteRoomManager {
     this.assertNoRoom();
 
     const roomId = randomId(8);
+    const privateRoom = !!preferSetting.privateRoom;
     const localCreateTime = new Date();
 
     const room = {
       id: roomId,
       boardSize: preferSetting.boardSize.toString(),
       ownerFirst: (preferSetting.order == GobbletSetting.orderFirst),
-      privateRoom: !!preferSetting.privateRoom,
+      privateRoom,
       createTime: firebase.firestore.FieldValue.serverTimestamp(),
       joinTime: null,
       endTime: null,
     };
 
-    const roomsRef = this.db.collection('room');
+    const roomKind = (privateRoom) ? 'private' : 'public';
+    const roomsRef = this.db.collection(roomKind);
     const roomRef = await roomsRef.add(room);
 
     this.roomRef = roomRef;
@@ -122,8 +124,7 @@ class RemoteRoomManager {
 
     preferSetting.privateRoom = false;
 
-    const roomsRef = this.db.collection('room');
-    //.orderBy('createTime', 'desc').limit(1);
+    const roomsRef = this.db.collection('public');
 
     const roomQuery = roomsRef.limit(1)
       .where('endTime', '==', null)
@@ -132,7 +133,7 @@ class RemoteRoomManager {
     const roomSnapshot = await roomQuery.get();
 
     if (roomSnapshot.size == 0) {
-      console.log('{ } no public room');
+      console.log('{ manager } no public room');
       return undefined;
     }
 
@@ -157,17 +158,24 @@ class RemoteRoomManager {
       throw new NoRoomError(roomId);
     }
 
-    const roomsRef = this.db.collection('room');
-    //.orderBy('createTime', 'desc').limit(1);
+    const findFrom = async (kind) => {
+      console.log('{ manager } find from:', kind);
+      const roomsRef = this.db.collection(kind);
 
-    const roomQuery = roomsRef.where('id', '==', roomId).limit(1);
-    const roomSnapshot = await roomQuery.get();
+      const roomQuery = roomsRef.where('id', '==', roomId).limit(1);
+      let roomSnapshot = await roomQuery.get();
 
-    if (roomSnapshot.size == 0) {
+      if (roomSnapshot.size > 0) {
+        return roomSnapshot.docs[0];
+      } else {
+        return undefined;
+      }
+    };
+
+    const roomDoc = await findFrom('private') || await findFrom('public');
+    if (!roomDoc) {
       throw new NoRoomError(roomId);
     }
-
-    const roomDoc = roomSnapshot.docs[0];
 
     this.roomRef = roomDoc.ref;
     console.info('{', this.roomRef.id, '} room found');
@@ -212,7 +220,8 @@ class RemoteRoomManager {
   }
 
   useRoom(room) {
-    this.listener.listen(this.roomRef.id);
+    this.stepsRef = this.roomRef.collection('step');
+    this.listener.listen(this.stepsRef, this.roomRef.id);
 
     // for local use.
     room.boardSize = GobbletSetting.fromString(room.boardSize);
@@ -248,8 +257,7 @@ class RemoteRoomManager {
   }
 
   async sendException(exception) {
-    const stepsRef = this.roomRef.collection('step');
-    await stepsRef.doc('exception').set(exception);
+    await this.stepsRef.doc('exception').set(exception);
   }
 
   assertNoRoom() {
@@ -259,10 +267,10 @@ class RemoteRoomManager {
 
   getPlayerAManager() {
     assert(this.room);
-    assert(this.roomRef);
+    assert((this.roomRef) && (this.stepsRef));
 
     if (this.room.viewMode) {
-      return new ViewerPlayerManager(this.roomRef.id, this.db, this.listener);
+      return new ViewerPlayerManager(this.stepsRef, this.db, this.listener);
     } else {
       return new this.defaultPlayerAFactory();
     }
@@ -270,12 +278,12 @@ class RemoteRoomManager {
 
   getPlayerBManager() {
     assert(this.room);
-    assert(this.roomRef);
+    assert((this.roomRef) && (this.stepsRef));
 
     if (this.room.viewMode) {
-      return new ViewerPlayerManager(this.roomRef.id, this.db, this.listener);
+      return new ViewerPlayerManager(this.stepsRef, this.db, this.listener);
     } else {
-      return new RemotePlayerManager(this.roomRef.id, this.db, this.listener);
+      return new RemotePlayerManager(this.stepsRef, this.db, this.listener);
     }
   }
 }
@@ -293,7 +301,7 @@ class RemoteRoomListener {
     this.db = db;
   }
 
-  listen(roomDocId) {
+  listen(stepsRef, roomDocId) {
     assert(!this.unsubscribe);
 
     console.info('{', roomDocId, '} start room listener');
@@ -304,13 +312,12 @@ class RemoteRoomListener {
 
     this._stepFuture = undefined;
 
-    const stepsRef = this.db.collection(`room/${roomDocId}/step`);
     this.unsubscribe = stepsRef.onSnapshot(snapshot => {
       const newStep = [];
       snapshot.docChanges().forEach(change => {
         if (change.doc.metadata.hasPendingWrites) {
           const doc = { ...change.doc.data() };
-          console.log('{', roomDocId, '} skip:', doc);
+          console.log('{', this.roomDocId, '} skip:', doc);
           return;
         }
 
@@ -321,20 +328,20 @@ class RemoteRoomListener {
           } else {
             newStep.push(doc);
           }
-          console.log('{', roomDocId, '} added:', doc);
+          console.log('{', this.roomDocId, '} added:', doc);
         } else if (change.type == 'modified') {
           const doc = { ...change.doc.data() };
           if (doc.exception) {
             this.savedException.push(doc);
           } else {
-            console.warn('{', roomDocId, '} unreachable:', change.type, doc);
+            console.warn('{', this.roomDocId, '} unreachable:', change.type, doc);
           }
         } else {
-          console.warn('{', roomDocId, '} unreachable:', change.type, doc);
+          console.warn('{', this.roomDocId, '} unreachable:', change.type, doc);
         }
       });
 
-      console.log('{', roomDocId, '} sort recved step by `seq`');
+      console.log('{', this.roomDocId, '} sort recved step by `seq`');
       newStep.sort((a, b) => a.seq - b.seq);
       this.savedStep.push(...newStep);
 
