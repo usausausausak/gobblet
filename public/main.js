@@ -167,14 +167,17 @@ View.prototype.changePage = function (pageId) {
         history.replaceState(state, '', '/');
       }
       document.body.dataset.page = state.pageId;
+      window.scrollTo(0, 0);
       break;
     case 'result':
     case 'playend':
     case 'error':
       document.body.dataset.page = state.pageId;
+      window.scrollTo(0, 0);
       break;
     default:
       document.body.dataset.page = 'main';
+      window.scrollTo(0, 0);
       break;
   }
 }

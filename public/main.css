@@ -178,7 +178,7 @@ body[data-page="error"]   #page-main {
   overflow: clip;
 }
 
-#match-message img { max-width: calc(100vw - 48px); max-height: max-height: calc(100% - 80px); }
+#match-message img { max-width: calc(100vw - 48px); max-height: 50vh; overflow: hidden; }
 
 #match-info {
   border-radius: 12px;
@@ -331,13 +331,20 @@ body[data-page="error"]   #page-main {
 .turn .hand::before { transform: scale(0.7) rotate(180deg); }
 */
 
+#board,
+#board .hand-display,
 #my-hands .hand-display,
+.turn #board.turn,
 .turn #islanders-hands .hand-display,
-#board .hand-display, #board, .turn #board.turn { box-shadow: 2px 2px 10px #555; }
+.turn #board.turn .hand-display { box-shadow: 2px 2px 10px #555; }
 
-.turn #my-hands .hand-display,
+#board.turn,
+#board.trun .hand-display,
 #islanders-hands .hand-display,
-.turn #board .hand-display, #board.turn { box-shadow: -2px -2px 10px #555; }
+.turn #board,
+.turn #board .hand-display,
+.turn #my-hands .hand-display,
+#board.turn .hand-display { box-shadow: -2px -2px 10px #555; }
 
 #my-hands .hand[data-color='undefined'] .hand-display,
 #islanders-hands .hand[data-color='undefined'] .hand-display,
@@ -425,7 +432,8 @@ body[data-page="error"]   #page-main {
 @media screen and (max-width: 1200px) {
   body { margin: 0; padding: 0; justify-content: stretch; }
   body:not([data-page="choose"]) #page-choose,
-  body:not([data-page="rules"]) #dialog-rules { display: none; }
+  body:not([data-page="rules"]) #dialog-rules,
+  body:not([data-page="match"]) #dialog-match { display: none; }
   body[data-page="rules"]  #komica { max-height: unset; overflow-y: unset; overflow-x: hidden; }
   .page { margin: 0; padding: 0; min-width: unset; height: 100vh; }
   .page.dialog, .dialog-header, .dialog-footer { border-radius: 0; }
@@ -442,6 +450,7 @@ body[data-page="error"]   #page-main {
   .dialog { place-self: stretch; border-radius: 0; }
   .dialog-footer { flex-direction: column; }
   .dialog-backdrop .dialog { width: 100vw; height: 100vh; }
+  .dialog-header { padding: 6px; }
   #page-choose { justify-self: stretch; align-self: start; grid-template: "r1" "r2" "m" "p" "r" "j" "s1" "s2"; place-items: stretch; padding: 12px; }
   #page-choose .button { width: unset; height: unset; padding: 12px; margin: 6px 0; }
   #page-choose .sub-button { grid-area: unset; padding: unset; }
