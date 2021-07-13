@@ -1,6 +1,6 @@
 import { LeaveRoomError } from './gobblet.js';
 import { LocalRoomManager } from './local-room-manager.js';
-import { assert, assertNot, randomId, NamedPromise } from './util.js';
+import { assert, assertNot, randomId, NamedPromise, itemAt } from './util.js';
 
 export class SingleSeatPlayerManager {
   async recvStep(step) {
@@ -46,7 +46,7 @@ export class SingleSeatPlayerManager {
   async clickFromHand(controller, selectedStep, input) {
     assert((input.handIdx >= 0) && (input.handIdx < controller.player.hands.length));
     assert(controller.player.color);
-    const hand = controller.player.hands[input.handIdx].at(-1);
+    const hand = itemAt(controller.player.hands[input.handIdx], -1);
     assert((hand.power > 0) && (hand.power <= controller.game.maxPower));
 
     const selectedFrom = selectedStep.handFrom;
@@ -71,7 +71,7 @@ export class SingleSeatPlayerManager {
 
   async clickFromPlace(controller, selectedStep, input) {
     assert((input.placeIdx >= 0) && (input.placeIdx < controller.board.length));
-    const place = controller.board[input.placeIdx].at(-1);
+    const place = itemAt(controller.board[input.placeIdx], -1);
 
     const selectedFrom = selectedStep.handFrom;
     const selectedHand = selectedStep.hand;

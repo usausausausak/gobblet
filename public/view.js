@@ -1,7 +1,7 @@
 import { LeaveRoomError } from './gobblet.js';
 import * as roomManager from './single-seat-room-manager.js';
 import { LocalRoomManager } from './local-room-manager.js';
-import { NamedPromise, unreachable, delay } from './util.js';
+import { NamedPromise, unreachable, delay, itemAt } from './util.js';
 
 export class View {
   constructor(sessionManager) {
@@ -418,7 +418,7 @@ export class View {
     for (let vmmodelPlaceStack of board) {
       const place = this.place.cloneNode(true);
       const hand = place.firstElementChild;
-      hand.dataset.placeIdx = vmmodelPlaceStack.at(-1).idx;
+      hand.dataset.placeIdx = itemAt(vmmodelPlaceStack, -1).idx;
       hand.dataset.power = 0;
       hand.dataset.color = 'undefined';
 
@@ -431,7 +431,7 @@ export class View {
 
     let handIdx = 0;
     for (let vmmodelHandStack of vmmodel.hands) {
-      const vmmodelHand = vmmodelHandStack.at(-1);
+      const vmmodelHand = itemAt(vmmodelHandStack, -1);
       const hand = this.hand.cloneNode(true);
       hand.dataset.handIdx = vmmodelHand.idx;
       hand.dataset.power = vmmodelHand.power;

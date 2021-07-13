@@ -1,5 +1,5 @@
 import { GobbletSetting, NoRoomError, LeaveRoomError } from './gobblet.js';
-import { assert, assertNot, randomUnder, randomId, delay } from './util.js';
+import { assert, assertNot, randomUnder, randomId, delay, itemAt } from './util.js';
 
 export class LocalRoomManager {
   constructor(defaultPlayerAFactory) {
@@ -116,10 +116,10 @@ export class RandomPlayerManager {
   }
 
   async getStep(controller) {
-    const board = controller.board.map(stack => stack.at(-1));
+    const board = controller.board.map(stack => itemAt(stack, -1));
     const player = {
       color: controller.player.color,
-      hands: controller.player.hands.map(stack => stack.at(-1)),
+      hands: controller.player.hands.map(stack => itemAt(stack, -1)),
     };
     const step = this.randomHand(board, player);
     if (!step) {

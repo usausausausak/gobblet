@@ -1,4 +1,4 @@
-import { assert, assertNot, randomUnder, randomId, delay } from './util.js';
+import { assert, assertNot, randomUnder, randomId, delay, itemAt } from './util.js';
 
 const gameSetting3 = {
   boardSize: 3,
@@ -97,14 +97,14 @@ export function assertRules(step, player, board) {
 
   // stack index 0 is placeholder.
   assert(handStack.length > 1, 'empty-hand-stack');
-  const hand = handStack.at(-1);
+  const hand = itemAt(handStack, -1);
 
   assert((placeIdx >= 0) && (placeIdx < board.length), 'invaild-place');
   const placeStack = board[placeIdx];
 
   // should always pass because we have a placeholder.
   assert(placeStack.length > 0, 'placeholder-goes-1');
-  const place = placeStack.at(-1);
+  const place = itemAt(placeStack, -1);
 
   console.log('from:', handFrom, 'hand:', hand, 'place:', place);
 
@@ -122,8 +122,8 @@ export function assertRules(step, player, board) {
 export function detectWinner(gameSetting, winPatterns, playerA, playerB, board) {
   // someone lose if he not have any hand.
   if (gameSetting.loseWithNoHands) {
-    const hasNoHandA = playerA.hands.every(hand => !hand.at(-1).color);
-    const hasNoHandB = playerB.hands.every(hand => !hand.at(-1).color);
+    const hasNoHandA = playerA.hands.every(hand => !itemAt(hand, -1).color);
+    const hasNoHandB = playerB.hands.every(hand => !itemAt(hand, -1).color);
     if (hasNoHandA) {
       return { color: playerB.color, reason: 'no-more-hand' };
     } else if (hasNoHandB) {
@@ -134,7 +134,7 @@ export function detectWinner(gameSetting, winPatterns, playerA, playerB, board) 
   // find all filled line.
   const filledLines = [];
   for (let pattern of winPatterns) {
-    const values = pattern.map(i => board[i].at(-1).color);
+    const values = pattern.map(i => itemAt(board[i], -1).color);
     const aColor = values[0];
     if (values.every(b => ((b) && (b == aColor)))) {
       filledLines.push({ color: aColor, pattern });
@@ -143,7 +143,7 @@ export function detectWinner(gameSetting, winPatterns, playerA, playerB, board) 
 
   if (filledLines.length == 0) {
     // if no more empty place, draw game.
-//      const haveEmptyPlace = board.find(stack => !stack.at(-1).color);
+//      const haveEmptyPlace = board.find(stack => !itemAt(stack, -1).color);
 //      if (!haveEmptyPlace) {
 //        return { color: 'draw', reason: 'no-more-place' };
 //      }
@@ -236,7 +236,7 @@ export class Gobblet {
     assert(placeStack.length > 0, 'placeholder-goes-3');
 
     // revert the last form hand stack.
-    const revert = handStack.at(-1);
+    const revert = itemAt(handStack, -1);
 
     const commits = [
       { ...revert, act: 'pop',  playerColor: player.color, handFrom },
