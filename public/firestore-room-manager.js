@@ -75,7 +75,7 @@ class RemoteRoomManager {
     const localCreateTime = new Date();
 
     const room = {
-      id: roomId,
+      id: roomId, rev: 1,
       boardSize: preferSetting.boardSize.toString(),
       ownerFirst: (preferSetting.order == GobbletSetting.orderFirst),
       privateRoom,
@@ -219,12 +219,34 @@ class RemoteRoomManager {
     return this.useRoom(room);
   }
 
+  async updateRoom() {
+    assert(this.room.myPrivateRoom);
+    const room = this.room;
+
+    ++room.rev;
+    room.joinTime  = null;
+    room.endTime   = null;
+    room.boardSize = room.boardSize.toString(),
+
+    // TODO: record update time
+    await this.roomRef.update({
+      rev: room.rev,
+      joinTime: null,
+      endTime: null,
+    });
+    console.info('{', this.roomRef.id, '} update room, rev:', room.rev);
+
+    return room;
+  }
+
   useRoom(room) {
-    this.stepsRef = this.roomRef.collection('step');
+    this.stepsRef = this.roomRef.collection(`steps-${this.room.rev}`);
     this.listener.listen(this.stepsRef, this.roomRef.id);
 
     // for local use.
     room.boardSize = GobbletSetting.fromString(room.boardSize);
+    room.myPrivateRoom = ((room.myRoom) && (room.privateRoom));
+    room.localEndTime = undefined;
 
     this.room = room;
 
@@ -241,14 +263,13 @@ class RemoteRoomManager {
   }
 
   async detachRoom() {
-    this.room = undefined;
     this.listener.stop();
-    this.assertNoRoom();
+    this.assertRoomDetached();
   }
 
   async endRoom() {
     await this.roomRef.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() });
-    await this.detachRoom();
+    this.detachRoom();
   }
 
   async endRoomWithException(exception) {
@@ -262,6 +283,11 @@ class RemoteRoomManager {
 
   assertNoRoom() {
     assertNot(this.room);
+    assertNot(this.listener.listening);
+  }
+
+  assertRoomDetached() {
+    assert(this.room);
     assertNot(this.listener.listening);
   }
 

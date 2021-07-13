@@ -8,7 +8,7 @@ export class SessionManager {
     this.roomManagerFactory = undefined;
 
     // placeholder, always have a value
-    this.placeholder = { running: false, removeListener() {} };
+    this.placeholder = { running: false, room: undefined, removeListener() {} };
     this.current = this.placeholder;
 
     this.onSessionChanged = async (controller) => {};
@@ -39,6 +39,22 @@ export class SessionManager {
       await this.setCurrent(session);
 
       await session.match(preferSetting);
+    } catch (e) {
+      await this.setCurrent();
+      if (e instanceof CancelPromiseError) {
+        console.warn(e);
+      } else {
+        console.error(e);
+        this.onError(e);
+      }
+    }
+  }
+
+  async acceptOtherPlayer() {
+    assert(this.current);
+
+    try {
+      await this.current.acceptOtherPlayer();
     } catch (e) {
       await this.setCurrent();
       if (e instanceof CancelPromiseError) {

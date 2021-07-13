@@ -2,7 +2,7 @@ import {
   NoRoomError, RoomFullError, LeaveRoomError,
   LeaveException, WaitTimeoutException, StepLimitException,
 } from './gobblet.js';
-import { TimeoutError, assertNot, delay, NamedPromise } from './util.js';
+import { TimeoutError, assert, assertNot, delay, NamedPromise } from './util.js';
 
 export class Contoller {
   constructor(game, roomManager) {
@@ -172,6 +172,34 @@ export class Contoller {
 
     await this.drop();
     await this.onGameLeaved();
+  }
+
+  async acceptOtherPlayer() {
+    assert(!this.running);
+    this.manager.room.assertRoomDetached();
+    assert(this.manager.room.room.myPrivateRoom);
+
+    try {
+      this.running    = true;
+      this.suspending = true;
+
+      console.info('[ new session ] reuse room:', this.manager.room.room);
+
+      await this.manager.room.updateRoom();
+      await this.onMatchingInfo(this.manager.room.room);
+
+      this.stopPromise = this.onStoppable();
+      const waitPromise = this.manager.room.waitForPlayerJoin();
+      await Promise.race([waitPromise, this.stopPromise]);
+
+      await this.start();
+    } catch (e) {
+      if (e instanceof LeaveRoomError) {
+        await this.stoppedWaitForPlayer();
+      } else {
+        throw e;
+      }
+    }
   }
 
   async start() {

@@ -198,10 +198,12 @@ export class View {
         this.board.classList.add('turn');
       }
 
-      // TODO: new-game button only display at local, should we?
+      // we can reuse our private room.
+      const localRoom =(controller.manager.room instanceof LocalRoomManager);
+      const myPrivateRoom = ((room.myPrivateRoom) || (localRoom));
       const newGame = document.getElementById('new-game');
-      if (controller.manager.room instanceof LocalRoomManager) {
-        newGame.style.display = undefined;
+      if (myPrivateRoom) {
+        newGame.style.display = '';
       } else {
         newGame.style.display = 'none';
       }

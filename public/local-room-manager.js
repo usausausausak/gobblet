@@ -12,13 +12,14 @@ export class LocalRoomManager {
       GobbletSetting.boardSize3 : GobbletSetting.boardSize4;
     const ownerFirst = (preferSetting.order == GobbletSetting.orderFirst);
     this.room = {
-      id: `local-${randomId(8)}`,
+      id: `local-${randomId(8)}`, rev: 1,
       boardSize, ownerFirst,
       privateRoom: true,
       createTime: new Date(),
       joinTime: new Date(),
       endTime: null,
       myRoom: true,
+      myPrivateRoom: true,
       viewMode: false,
       localCreateTime: new Date(),
       localJoinTime: new Date(),
@@ -46,14 +47,20 @@ export class LocalRoomManager {
     throw new NoRoomError();
   }
 
+  async updateRoom() {
+    ++this.room.rev;
+    this.room.joinTime  = null;
+    this.room.endTime   = null;
+
+    return this.room;
+  }
+
   async detachRoom() {
     console.info('{ local-room } room detach');
-    this.room = undefined;
   }
 
   async endRoom() {
     console.info('{ local-room } room end');
-    this.room = undefined;
   }
 
   async endRoomWithException(exception) {
@@ -66,6 +73,14 @@ export class LocalRoomManager {
   }
 
   async sendException(exception) {
+    // pass
+  }
+
+  assertNoRoom() {
+    // pass
+  }
+
+  assertRoomDetached() {
     // pass
   }
 
