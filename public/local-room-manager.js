@@ -1,4 +1,4 @@
-import { GobbletSetting, NoRoomError, LeaveRoomError } from './gobblet.js';
+import { GobbletSetting, NoRoomError, LeaveException } from './gobblet.js';
 import { assert, assertNot, randomUnder, randomId, delay, itemAt } from './util.js';
 
 export class LocalRoomManager {
@@ -203,7 +203,7 @@ export class RandomPlayerManager {
 
     // no biger hand and no more on hands
     if (selfHands.length == 0) {
-      throw new LeaveRoomError();
+      throw new LeaveException(color);
     }
 
     // no bigger hand, find a hand from hand and place to some empty place
