@@ -175,9 +175,10 @@ body[data-page="error"]   #page-main {
   display: flex;
   flex-direction: column;
   place-items: center;
+  overflow: clip;
 }
 
-#match-info img { max-width: calc(100vw - 48px); }
+#match-message img { max-width: calc(100vw - 48px); max-height: max-height: calc(100% - 80px); }
 
 #match-info {
   border-radius: 12px;
@@ -428,19 +429,19 @@ body[data-page="error"]   #page-main {
   body[data-page="rules"]  #komica { max-height: unset; overflow-y: unset; overflow-x: hidden; }
   .page { margin: 0; padding: 0; min-width: unset; height: 100vh; }
   .page.dialog, .dialog-header, .dialog-footer { border-radius: 0; }
+  .dialog-backdrop .dialog { width: 90vw }
   #dialog-rules .dialog-header { position: sticky; top: 0; }
   #page-choose { place-self: center; grid-template: "r1 r2" "m p" "r j" "s1 s1" "s2 s2"; height: unset; }
   #page-choose .button { height: unset; }
   #page-choose #rules.button { margin-top: 48px; }
   #dialog-rules { height: unset; }
   #page-main .info { align-self: start; margin-top: 24px; }
-
-  .dialog-backdrop .dialog { width: 90vw }
 }
 
 @media screen and (max-width: 650px) {
   .dialog { place-self: stretch; border-radius: 0; }
   .dialog-footer { flex-direction: column; }
+  .dialog-backdrop .dialog { width: 100vw; height: 100vh; }
   #page-choose { justify-self: stretch; align-self: start; grid-template: "r1" "r2" "m" "p" "r" "j" "s1" "s2"; place-items: stretch; padding: 12px; }
   #page-choose .button { width: unset; height: unset; padding: 12px; margin: 6px 0; }
   #page-choose .sub-button { grid-area: unset; padding: unset; }
@@ -451,6 +452,4 @@ body[data-page="error"]   #page-main {
   .place { padding: 6px; }
   #view[data-sqrt="3"] .hand { width: 40px; height: 40px; }
   #view[data-sqrt="4"] .hand { width: 40px; height: 40px; }
-
-  .dialog-backdrop .dialog { width: 100vw; height: 100vh; }
 }
