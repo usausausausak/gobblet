@@ -124,12 +124,16 @@ class RemoteRoomManager {
 
     preferSetting.privateRoom = false;
 
-    const roomsRef = this.db.collection('public');
+    // TODO: do not compare server time and local time.
+    const autoCloseTimeSecond = 90;
+    const nowTime = firebase.firestore.Timestamp.now();
+    const closeTime = new Date(Date.now() - autoCloseTimeSecond * 1000);
 
+    const roomsRef = this.db.collection('public');
     const roomQuery = roomsRef.limit(1)
+      .where('createTime', '>', closeTime)
       .where('endTime', '==', null)
-      .where('joinTime', '==', null)
-      .where('privateRoom', '==', false);
+      .where('joinTime', '==', null);
     const roomSnapshot = await roomQuery.get();
 
     if (roomSnapshot.size == 0) {
