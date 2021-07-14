@@ -13,6 +13,14 @@ function getFirestore(auth) {
     .firestore();
 }
 
+function timestamp() {
+  return firebase.firestore.FieldValue.serverTimestamp();
+}
+
+function newDummyRoom(privateRoom) {
+  return { joinTime: null, endTime: null, privateRoom: !!privateRoom };
+}
+
 function nullPlayerManagerFactory() {
   return undefined;
 }
@@ -35,78 +43,152 @@ after(async () => {
 });
 
 describe('gobblet', () => {
-  it('only write inside public and private', async () => {
+  it('should not read outside public and private', async () => {
+    const db = getFirestore();
+    await firebase.assertFails(db.collection('something').doc('bob').get());
+  });
+
+  it('should not write outside public and private', async () => {
     const db = getFirestore();
 
-    await firebase.assertSucceeds(db.collection('public').add({ joinTime: null, endTime: null }));
-    await firebase.assertSucceeds(db.collection('private').add({ joinTime: null, endTime: null }));
-    await firebase.assertFails(db.collection('something').add({ joinTime: null, endTime: null }));
-    await firebase.assertFails(db.collection('something').doc('bob').set({ joinTime: null, endTime: null }));
-    await firebase.assertFails(db.collection('something').doc('bob').update({ joinTime: null, endTime: null }));
+    await firebase.assertFails(db.collection('something').add(newDummyRoom()));
+    await firebase.assertFails(db.collection('something').add(newDummyRoom(true)));
+    await firebase.assertFails(db.collection('something').doc('bob').set(newDummyRoom()));
+    await firebase.assertFails(db.collection('something').doc('bob').update(newDummyRoom()));
   });
 
   for (let kind of ['public', 'private']) {
+    const privateRoom = (kind == 'private');
+    const dummyRoom = newDummyRoom(privateRoom);
     it(`create ${kind} room`, async () => {
       const db = getFirestore();
-      const room = await db.collection(kind);
+      const roomsRef = db.collection(kind);
 
-      await firebase.assertSucceeds(room.add({ joinTime: null, endTime: null }));
-      await firebase.assertFails(room.add({ joinTime: firebase.firestore.FieldValue.serverTimestamp() }));
-      await firebase.assertFails(room.add({ endTime: firebase.firestore.FieldValue.serverTimestamp() }));
+      await firebase.assertSucceeds(roomsRef.add(dummyRoom));
+      await firebase.assertFails(roomsRef.add({ joinTime: timestamp() }));
+      await firebase.assertFails(roomsRef.add({ endTime: timestamp() }));
     });
 
     it(`join ${kind} room`, async () => {
       const db = getFirestore();
-      const doc = await db.collection(kind).add({ joinTime: null, endTime: null });
+      const room = await db.collection(kind).add(dummyRoom);
 
-      await firebase.assertSucceeds(doc.update({ joinTime: firebase.firestore.FieldValue.serverTimestamp() }));
-      await firebase.assertFails(doc.update({ joinTime: firebase.firestore.FieldValue.serverTimestamp() }));
+      await firebase.assertSucceeds(room.update({ joinTime: timestamp() }));
+      await firebase.assertFails(room.update({ joinTime: timestamp() }));
     });
 
-    it(`update ${kind} room`, async () => {
+    it(`end ${kind} room`, async () => {
       const db = getFirestore();
-      const doc = await db.collection(kind).add({ joinTime: null, endTime: null });
-      doc.update({ joinTime: firebase.firestore.FieldValue.serverTimestamp() });
+      const room = await db.collection(kind).add(dummyRoom);
+      room.update({ joinTime: timestamp() });
 
-      await firebase.assertFails(doc.update({ joinTime: firebase.firestore.FieldValue.serverTimestamp() }));
+      await firebase.assertSucceeds(room.update({ endTime: timestamp() }));
+    });
 
-      await firebase.assertSucceeds(doc.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() }));
-      await firebase.assertSucceeds(doc.update({ joinTime: null, endTime: null }));
+    it(`should not join and end a ended ${kind} room`, async () => {
+      const db = getFirestore();
+      const room = await db.collection(kind).add(dummyRoom);
+      room.update({ endTime: timestamp() });
+
+      await firebase.assertFails(room.update({ joinTime: timestamp() }));
+      await firebase.assertFails(room.update({ endTime: timestamp() }));
     });
 
     it(`should not delete ${kind} room`, async () => {
       const db = getFirestore();
-      const doc = await db.collection(kind).add({ joinTime: null, endTime: null });
+      const room = await db.collection(kind).add(dummyRoom);
 
-      await firebase.assertFails(doc.delete());
+      await firebase.assertFails(room.delete());
     });
 
     it(`stop match ${kind} room`, async () => {
       const db = getFirestore();
-      const doc = await db.collection(kind).add({ joinTime: null, endTime: null });
+      const room = await db.collection(kind).add(dummyRoom);
 
-      await firebase.assertSucceeds(doc.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() }));
-      await firebase.assertFails(doc.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() }));
+      await firebase.assertSucceeds(room.update({ endTime: timestamp() }));
+      await firebase.assertFails(room.update({ endTime: timestamp() }));
     });
 
-    it(`can write exception in ${kind} room`, async () => {
+    it(`should not create opposite room in ${kind} coolection`, async () => {
       const db = getFirestore();
-      const ref = await db.collection(kind).add({ joinTime: null, endTime: null });
-      const steps = ref.collection('step');
+      const roomsRef = db.collection(kind);
 
-      await firebase.assertSucceeds(steps.doc('exception').set({  }));
-      await firebase.assertSucceeds(steps.doc('exception').update({  }));
-      await firebase.assertFails(steps.doc('exception').delete({  }));
+      await firebase.assertFails(roomsRef.add(newDummyRoom(!privateRoom)));
+    });
+
+    it(`listening ${kind} room`, async () => {
+      const db = getFirestore();
+      const room = await db.collection(kind).add(dummyRoom);
+      const stepsRef = room.collection('steps-1');
+
+      const unsubscribe = await firebase.assertSucceeds(stepsRef.onSnapshot(() => {}));
+      await firebase.assertSucceeds(unsubscribe());
+    });
+
+    it(`create step and exception in ${kind} room`, async () => {
+      const db = getFirestore();
+      const room = await db.collection(kind).add(dummyRoom);
+      const stepsRef = room.collection('steps-1');
+
+      await firebase.assertSucceeds(stepsRef.doc('step-1').set({  }));
+      await firebase.assertSucceeds(stepsRef.doc('exception').set({  }));
     });
 
     it(`should not update step in ${kind} room`, async () => {
       const db = getFirestore();
-      const ref = await db.collection(kind).add({ joinTime: null, endTime: null });
-      const doc = ref.collection('step').doc('step');
+      const room = await db.collection(kind).add(dummyRoom);
+      const step = room.collection('steps-1').doc('step-1');
+      await step.set({  });
+
+      await firebase.assertFails(step.update({  }));
+    });
+
+    it(`update exception in ${kind} room`, async () => {
+      const db = getFirestore();
+      const room = await db.collection(kind).add(dummyRoom);
+      const exception = room.collection('steps-1').doc('exception');
+      await exception.set({  });
+
+      await firebase.assertSucceeds(exception.update({  }));
+    });
+
+    it(`should not delete step and exception in ${kind} room`, async () => {
+      const db = getFirestore();
+      const room = await db.collection(kind).add(dummyRoom);
+      const stepsRef = room.collection('steps-1');
+      const step = stepsRef.doc('step-1');
+      await step.set({ });
+      const exception = stepsRef.doc('exception');
+      await exception.set({ });
+
+      await firebase.assertFails(step.delete());
+      await firebase.assertFails(exception.delete());
+    });
+
+    it(`should not write step and exception in not exist ${kind} room`, async () => {
+      const db = getFirestore();
+      const room = await db.collection(kind).add(dummyRoom);
+      const doc = room.collection('steps-1').doc('step-1');
 
       await firebase.assertSucceeds(doc.set({  }));
       await firebase.assertFails(doc.update({  }));
       await firebase.assertFails(doc.delete());
     });
   }
+
+  it(`should not update public room`, async () => {
+    const db = getFirestore();
+    const room = await db.collection('public').add(newDummyRoom());
+    room.update({ joinTime: timestamp(), endTime: timestamp() });
+
+    await firebase.assertFails(room.update({ joinTime: null, endTime: null }));
+  });
+
+  it(`update private room`, async () => {
+    const db = getFirestore();
+    const room = await db.collection('private').add(newDummyRoom(true));
+    room.update({ joinTime: timestamp(), endTime: timestamp() });
+
+    await firebase.assertSucceeds(room.update({ joinTime: null, endTime: null }));
+  });
 });

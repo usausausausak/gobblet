@@ -10,6 +10,14 @@ service cloud.firestore {
         return roomKind == 'public' || roomKind == 'private';
       }
 
+      function roomPrivate() {
+        return resource.data.privateRoom == true && roomKind == 'private';
+      }
+
+      function roomVaild() {
+        return roomKind == 'public' || roomPrivate();
+      }
+
       function roomEmpty() {
         return resource.data.joinTime == null;
       }
@@ -22,27 +30,50 @@ service cloud.firestore {
         return resource.data.endTime == null;
       }
 
+      function createOrUpdateRoom() {
+        return request.resource.data.joinTime == null && request.resource.data.endTime == null;
+      }
+
+      function createPublicRoom() {
+        return roomKind == 'public' && request.resource.data.privateRoom == false;
+      }
+
+      function createPrivateRoom() {
+        return request.resource.data.privateRoom == true && roomKind == 'private';
+      }
+
+      function joinRoom() {
+        return request.resource.data.joinTime != null;
+      }
+
+      function endRoom() {
+        return request.resource.data.endTime != null;
+      }
+
       allow read: if vaildKind();
 
       // create room
-      allow create: if vaildKind() && request.resource.data.joinTime == null && request.resource.data.endTime == null;
+      allow create: if createOrUpdateRoom() && createPublicRoom() || createPrivateRoom();
 
       // stop match
-      allow update: if vaildKind() && roomOpen() && roomEmpty() && request.resource.data.endTime != null;
+      allow update: if roomVaild() && roomOpen() && roomEmpty() && endRoom();
 
       // join room
-      allow update: if vaildKind() && roomEmpty() && request.resource.data.joinTime != null;
+      allow update: if roomVaild() && roomOpen() && roomEmpty() && joinRoom();
 
       // end room
-      allow update: if vaildKind() && roomOpen() && request.resource.data.endTime != null;
+      allow update: if roomVaild() && roomOpen() && endRoom();
 
       // update room
-      allow update: if vaildKind() && roomClose() && request.resource.data.joinTime == null && request.resource.data.endTime == null;
+      allow update: if roomVaild() && roomClose() && roomPrivate() && createOrUpdateRoom() && resource.data.privateRoom == true;
 
       match /{steps}/{stepId} {
-        allow read: if true;
-        allow create, update: if stepId == 'exception';
-        allow create: if stepId != 'exception';
+        function roomExists() {
+          return exists(/databases/$(database)/documents/$(roomKind)/$(roomId));
+        }
+        allow read: if roomExists();
+        allow create, update: if roomExists() && stepId == 'exception';
+        allow create: if roomExists() && stepId != 'exception';
       }
     }
   }
