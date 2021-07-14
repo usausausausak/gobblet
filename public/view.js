@@ -7,12 +7,13 @@ export class View {
   constructor(sessionManager) {
     this.sessionManager = sessionManager;
 
+
     this.view      = document.getElementById('view');
     this.result    = document.getElementById('dialog-result');
     this.playend   = document.getElementById('dialog-playend');
     this.error     = document.getElementById('error-message');
 
-    this.matchInfo = document.getElementById('match-info');
+    this.matchMsg  = document.getElementById('match-message');
     this.roomId    = document.getElementById('room-id');
 
     this.board     = document.getElementById('board');
@@ -152,24 +153,36 @@ export class View {
     controller.onGameMatching = async () => {
       //console.log('session start');
 
+      this.matchMsg.dataset.phase = 'find';
+
       this.changePage({ pageId: 'match', newPage: true });
     };
 
-    controller.onMatchingInfo = async (room) => {
-      const url = new URL(window.location);
-      url.hash = `#${room.id}`;
+    controller.onMatchingPhase = async (phase, room) => {
+      if (room) {
+        const url = new URL(window.location);
+        url.hash = `#${room.id}`;
 
-      const link = document.getElementById('match-room-link');
-      link.href = url;
+        const link = document.getElementById('match-room-link');
+        link.href = url;
 
-      const roomId = document.getElementById('match-room-id');
-      roomId.textContent = url;
-
-      if (room.privateRoom) {
-        this.matchInfo.classList.add('display');
+        const roomId = document.getElementById('match-room-id');
+        roomId.textContent = url;
       }
 
-      this.changePage({ pageId: 'match', room: { id: room.id } });
+      if ((phase == 'wait') && (room.privateRoom)) {
+        this.matchMsg.dataset.phase = 'private';
+      } else {
+        this.matchMsg.dataset.phase = phase;
+      }
+      await delay(200);
+
+      switch (phase) {
+        case 'wait':
+        case 'join':
+          this.changePage({ pageId: 'match', room: { id: room.id } });
+          break;
+      }
     };
 
     controller.onGameStart = async ({ room, board, me, islander, startWithMyTurn }) => {
@@ -245,7 +258,7 @@ export class View {
     };
 
     controller.onGameLeaved = async () => {
-      this.matchInfo.classList.remove('display');
+      this.matchMsg.dataset.phase = 'undefined';
 
       this.changePage('choose');
     };

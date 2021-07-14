@@ -182,16 +182,19 @@ body[data-page="error"]   #page-main {
   justify-self: center;
   margin: 24px;
   max-width: calc(100vw - 48px);
-  display: flex;
-  background-color: transparent;
-  flex-direction: column;
+  display: grid;
+  grid-template: "i" "m";
   place-items: center;
+  align-content: center;
+  background-color: transparent;
   overflow: clip;
 }
 
 #match-message img { max-width: calc(100vw - 48px); max-height: 50vh; overflow: hidden; }
 
-#match-info {
+#match-message .short-info {
+  grid-area: m;
+  align-self: center;
   display: flex;
   flex-direction: column;
   place-items: center;
@@ -202,7 +205,13 @@ body[data-page="error"]   #page-main {
   border-radius: 12px;
   transition: 200ms;
 }
-#match-info.display { visibility: visible; opacity: 1; }
+
+#match-message[data-phase="find"]    #match-find,
+#match-message[data-phase="create"]  #match-create,
+#match-message[data-phase="wait"]    #match-wait,
+#match-message[data-phase="private"] #match-wait-private,
+#match-message[data-phase="update"]  #match-wait-private,
+#match-message[data-phase="join"]    #match-join { visibility: visible; opacity: 1; }
 
 #match-room-id { word-wrap: anywhere; }
 #match-room-link { color: #4545ab; }

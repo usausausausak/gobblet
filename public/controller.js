@@ -36,7 +36,7 @@ export class Contoller {
 
       console.info('[ new session ] matching room');
 
-      await this.onGameMatching(preferSetting);
+      await this.onGameMatching();
 
       if (preferSetting.roomId) {
         await this.joinOrView(preferSetting);
@@ -73,16 +73,17 @@ export class Contoller {
       }
 
       if (!this.manager.room.room) {
+        await this.onMatchingPhase('create');
         await this.manager.room.createRoom(preferSetting);
-        await this.onMatchingInfo(this.manager.room.room);
 
+        await this.onMatchingPhase('wait', this.manager.room.room);
         this.stopPromise = this.onStoppable();
         const waitPromise = this.manager.room.waitForPlayerJoin();
         await Promise.race([waitPromise, this.stopPromise]);
       } else {
+        await this.onMatchingPhase('join', this.manager.room.room);
         this.stopPromise = this.onStoppable();
         await this.manager.room.joinRoom();
-        await this.onMatchingInfo(this.manager.room.room);
       }
 
       await this.start();
@@ -104,8 +105,8 @@ export class Contoller {
       console.log('find room:', preferSetting.roomId);
 
       await this.manager.room.attachRoom(preferSetting.roomId);
-      await this.onMatchingInfo(this.manager.room.room);
 
+      await this.onMatchingPhase('join', this.manager.room.room);
       if (!this.manager.room.room.joinTime) {
         await this.manager.room.joinRoom();
       } else {
@@ -118,6 +119,7 @@ export class Contoller {
       }
 
       this.stopPromise = this.onStoppable();
+
       await this.start();
     } catch (e) {
       if (e instanceof NamedPromise.CancelPromiseError) {
@@ -196,11 +198,13 @@ export class Contoller {
       this.running    = true;
       this.suspending = true;
 
+      await this.onGameMatching();
       console.info('[ new session ] continue private room:', this.manager.room.room);
 
+      await this.onMatchingPhase('update');
       await this.manager.room.updateRoom();
-      await this.onMatchingInfo(this.manager.room.room);
 
+      await this.onMatchingPhase('wait', this.manager.room.room);
       this.stopPromise = this.onStoppable();
       const waitPromise = this.manager.room.waitForPlayerJoin();
       await Promise.race([waitPromise, this.stopPromise]);
@@ -408,7 +412,7 @@ export class Contoller {
 
     // view changed
     this.onGameMatching         = async () => {};
-    this.onMatchingInfo         = async (room) => {};
+    this.onMatchingPhase        = async (room) => {};
     this.onGameStart            = async (vmmodel) => {};
     this.onGameInterrupted      = async (iAmLeaved) => {};
     this.onGameSet              = async (winner, myColor) => {};
