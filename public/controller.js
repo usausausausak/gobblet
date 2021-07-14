@@ -28,8 +28,7 @@ export class Contoller {
   }
 
   async match(preferSetting) {
-    assertNot(this.running);
-    assertNot(this.manager.room.room);
+    this.manager.room.assertNoRoom();
 
     try {
       this.running    = true;
@@ -81,10 +80,9 @@ export class Contoller {
         const waitPromise = this.manager.room.waitForPlayerJoin();
         await Promise.race([waitPromise, this.stopPromise]);
       } else {
+        this.stopPromise = this.onStoppable();
         await this.manager.room.joinRoom();
         await this.onMatchingInfo(this.manager.room.room);
-
-        this.stopPromise = this.onStoppable();
       }
 
       await this.start();
@@ -134,8 +132,8 @@ export class Contoller {
       } else if (e instanceof NoRoomError) {
         await this.roomNotFound(e.roomId);
       } else if (e instanceof RoomFullError) {
-        await this.drop();
-        await this.onGameLeaved();
+        this.rematchTry = 0; // noretry
+        await this.rematchWhenFull(preferSetting);
       } else {
         throw e;
       }
@@ -146,14 +144,29 @@ export class Contoller {
     if (this.rematchTry > 0) {
       --this.rematchTry;
 
-      const waitBeforeRematch = 5;
-      console.log('found a fulled room, rematch after', waitBeforeRematch, 'seconds');
-      await delay(waitBeforeRematch * 1000);
+      try {
+        // TODO: no constant
+        const waitBeforeRematch = 5;
+        console.log('found a fulled room, rematch after', waitBeforeRematch, 'seconds');
+        await Promise.race([delay(waitBeforeRematch * 1000), this.stopPromise]);
+      } catch (e) {
+        if (e instanceof LeaveRoomError) {
+          console.info('[ new session ] no room match');
 
+          await this.drop();
+          await this.onGameLeaved();
+          return;
+        }
+      }
+
+      this.manager.room.detachRoom();
       this.match(preferSetting);
     } else {
+      console.info('[ new session ] no room match');
+      await this.onAlert('no-room-match');
+
       await this.drop();
-      await this.onError('no-match-room');
+      await this.onGameLeaved();
     }
   }
 
@@ -176,7 +189,7 @@ export class Contoller {
 
   async acceptOtherPlayer() {
     assert(!this.running);
-    this.manager.room.assertRoomDetached();
+    this.manager.room.assertRoomStopping();
     assert(this.manager.room.room.myPrivateRoom);
 
     try {
@@ -230,7 +243,7 @@ export class Contoller {
         await this.turnStart();
       }
     } catch (e) {
-      await this.manager.room.detachRoom();
+      await this.manager.room.stopRoom();
 
       console.error(e);
       this.drop();
@@ -297,7 +310,7 @@ export class Contoller {
       if (shouldReport) {
         await this.manager.room.endRoom();
       } else {
-        await this.manager.room.detachRoom();
+        await this.manager.room.stopRoom();
       }
 
       await this.drop();
@@ -319,7 +332,7 @@ export class Contoller {
     };
 
     if (this.game.room.viewMode) {
-      await this.manager.room.detachRoom();
+      await this.manager.room.stopRoom();
     } else {
       await this.manager.room.endRoomWithException(exception);
     }
@@ -342,7 +355,7 @@ export class Contoller {
 
   async someoneLeaved(leavedColor, reason = 'no-reason') {
     console.warn('[', this.game.room.id, '] player:', leavedColor, 'is leaved:', reason);
-    await this.manager.room.detachRoom();
+    await this.manager.room.stopRoom();
 
     await this.drop();
     await this.onGameInterrupted(leavedColor, this.me.player.color);
@@ -353,7 +366,7 @@ export class Contoller {
     const exception = { exception: 'step-limit' };
 
     if (this.game.room.viewMode) {
-      await this.manager.room.detachRoom();
+      await this.manager.room.stopRoom();
     } else {
       await this.manager.room.endRoomWithException(exception);
     }

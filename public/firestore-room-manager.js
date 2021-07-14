@@ -202,7 +202,13 @@ class RemoteRoomManager {
       throw new RoomFullError();
     }
 
-    await this.roomRef.update({ joinTime: firebase.firestore.FieldValue.serverTimestamp() });
+    // i think this is threw by joining a full room, try to rematch.
+    try {
+      await this.roomRef.update({ joinTime: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch (e) {
+      console.warn('i think this is threw by joining a full room, try to rematch.');
+      throw new RoomFullError();
+    }
     console.info('{', this.roomRef.id, '} join room');
 
     room.viewMode = false;
@@ -257,19 +263,25 @@ class RemoteRoomManager {
 
   async stopMatchRoom() {
     await this.roomRef.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() });
-
-    this.room = undefined;
-    this.assertNoRoom();
+    await this.detachRoom();
   }
 
   async detachRoom() {
+    this.room = undefined;
+    if (this.listener.listening) {
+      this.listener.stop();
+    }
+    this.assertNoRoom();
+  }
+
+  async stopRoom() {
     this.listener.stop();
-    this.assertRoomDetached();
+    this.assertRoomStopping();
   }
 
   async endRoom() {
     await this.roomRef.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() });
-    this.detachRoom();
+    this.stopRoom();
   }
 
   async endRoomWithException(exception) {
@@ -286,7 +298,7 @@ class RemoteRoomManager {
     assertNot(this.listener.listening);
   }
 
-  assertRoomDetached() {
+  assertRoomStopping() {
     assert(this.room);
     assertNot(this.listener.listening);
   }
@@ -380,7 +392,6 @@ class RemoteRoomListener {
     }, e => {
       this.unsubscribe = undefined;
       this._stepFuture = undefined;
-      this._futureMap.clear();
       console.warn('{', this.roomDocId, '} stop room listener unexpected');
       console.error(e);
     });
@@ -470,11 +481,14 @@ class RemoteRoomListener {
 }
 
 let firestoreDb = undefined;
-export function remoteRoomManagerFactory(defaultPlayerAFactory) {
-  if (!firestoreDb) {
-    firestoreDb = firebase.firestore();
+export function remoteRoomManagerFactory(defaultPlayerAFactory, db) {
+  if (!db) {
+    if (!firestoreDb) {
+      firestoreDb = firebase.firestore();
+    }
+    db = firestoreDb;
   }
 
-  const listener = new RemoteRoomListener(firestoreDb);
-  return new RemoteRoomManager(defaultPlayerAFactory, firestoreDb, listener);
+  const listener = new RemoteRoomListener(db);
+  return new RemoteRoomManager(defaultPlayerAFactory, db, listener);
 }

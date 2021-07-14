@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /{roomKind}/{roomId} {
+      function vaildKind() {
+        return roomKind == 'public' || roomKind == 'private';
+      }
+
+      function roomEmpty() {
+        return resource.data.joinTime == null;
+      }
+
+      function roomClose() {
+        return resource.data.endTime != null;
+      }
+
+      function roomOpen() {
+        return resource.data.endTime == null;
+      }
+
+      allow read: if vaildKind();
+
+      // create room
+      allow create: if vaildKind() && request.resource.data.joinTime == null && request.resource.data.endTime == null;
+
+      // stop match
+      allow update: if vaildKind() && roomOpen() && roomEmpty() && request.resource.data.endTime != null;
+
+      // join room
+      allow update: if vaildKind() && roomEmpty() && request.resource.data.joinTime != null;
+
+      // end room
+      allow update: if vaildKind() && roomOpen() && request.resource.data.endTime != null;
+
+      // update room
+      allow update: if vaildKind() && roomClose() && request.resource.data.joinTime == null && request.resource.data.endTime == null;
+
+      match /{steps}/{stepId} {
+        allow read: if true;
+        allow create, update: if stepId == 'exception';
+        allow create: if stepId != 'exception';
+      }
+    }
+  }
+}
