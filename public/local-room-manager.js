@@ -55,6 +55,10 @@ export class LocalRoomManager {
     return this.room;
   }
 
+  async stopMatchRoom() {
+    this.room = undefined;
+  }
+
   async detachRoom() {
     console.info('{ local-room } room detach');
   }
@@ -68,10 +72,6 @@ export class LocalRoomManager {
     this.room = undefined;
   }
 
-  async stopMatchRoom() {
-    this.room = undefined;
-  }
-
   async sendException(exception) {
     // pass
   }
@@ -80,7 +80,7 @@ export class LocalRoomManager {
     // pass
   }
 
-  assertRoomDetached() {
+  assertRoomStopping() {
     // pass
   }
 

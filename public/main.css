@@ -78,6 +78,16 @@ body[data-page="main"] .dialog-backdrop { background-color: #ffffffd4; }
   cursor: pointer;
 }
 
+.short-info {
+  background-color: #beccbc;
+  color: white;
+  justify-self: center;
+  box-shadow: unset;
+  padding: 0 48px;
+  margin: 6px;
+  border-radius: 12px;
+}
+
 body[data-page="choose"]  #page-choose,
 body[data-page="rules"]   #dialog-rules,
 body[data-page="match"]   #dialog-match,
@@ -173,6 +183,7 @@ body[data-page="error"]   #page-main {
   margin: 24px;
   max-width: calc(100vw - 48px);
   display: flex;
+  background-color: transparent;
   flex-direction: column;
   place-items: center;
   overflow: clip;
@@ -181,14 +192,17 @@ body[data-page="error"]   #page-main {
 #match-message img { max-width: calc(100vw - 48px); max-height: 50vh; overflow: hidden; }
 
 #match-info {
-  border-radius: 12px;
   display: flex;
+  flex-direction: column;
   place-items: center;
   margin-top: 24px;
   font-weight: bold;
   visibility: hidden;
+  opacity: 0;
+  border-radius: 12px;
+  transition: 200ms;
 }
-#match-info.display { visibility: visible; }
+#match-info.display { visibility: visible; opacity: 1; }
 
 #match-room-id { word-wrap: anywhere; }
 #match-room-link { color: #4545ab; }
@@ -265,13 +279,8 @@ body[data-page="error"]   #page-main {
 #me-message.message-display,
 #islander-message.message-display { opacity: 1; }
 
-.short-info {
-  background-color: #beccbc;
-  color: white;
-  justify-self: center;
-  border-radius: 6px;
+#room {
   margin-bottom: 12px;
-  box-shadow: unset;
 }
 
 #board {
@@ -456,7 +465,7 @@ body[data-page="error"]   #page-main {
   #page-choose .sub-button { grid-area: unset; padding: unset; }
   #page-choose .radio-box { justify-self: center; align-items: center; }
 
-  .message { padding: 0 12px; }
+  .short-info, .message { padding: 0 12px; }
   #board { grid-gap: 6px; border-width: 8px; }
   .place { padding: 6px; }
   #view[data-sqrt="3"] .hand { width: 40px; height: 40px; }

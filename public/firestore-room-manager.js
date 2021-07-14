@@ -280,7 +280,11 @@ class RemoteRoomManager {
   }
 
   async endRoom() {
+    try {
     await this.roomRef.update({ endTime: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch (e) {
+      console.warn('i think this is threw by opposite leaved at the last turn, just ignore.');
+    }
     this.stopRoom();
   }
 

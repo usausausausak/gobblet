@@ -152,8 +152,6 @@ export class View {
     controller.onGameMatching = async () => {
       //console.log('session start');
 
-      this.matchInfo.classList.remove('display');
-
       this.changePage({ pageId: 'match', newPage: true });
     };
 
@@ -162,10 +160,14 @@ export class View {
       url.hash = `#${room.id}`;
 
       const link = document.getElementById('match-room-link');
-      link.textContent = room.id;
       link.href = url;
 
-      this.matchInfo.classList.add('display');
+      const roomId = document.getElementById('match-room-id');
+      roomId.textContent = url;
+
+      if (room.privateRoom) {
+        this.matchInfo.classList.add('display');
+      }
 
       this.changePage({ pageId: 'match', room: { id: room.id } });
     };
@@ -243,6 +245,8 @@ export class View {
     };
 
     controller.onGameLeaved = async () => {
+      this.matchInfo.classList.remove('display');
+
       this.changePage('choose');
     };
 

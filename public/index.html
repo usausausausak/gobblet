@@ -55,7 +55,7 @@
   <div id="match-private" class="button">
     <div class="sub">對手難度：</div>
     <div>小圏圈</div>
-    <div class="sub">(秘密房間)</div>
+    <div class="sub">(建立秘密房間)</div>
   </div>
   <div id="match-one-seat" class="button">
     <div class="sub">對手難度：</div>
@@ -204,9 +204,11 @@
   <div class="dialog-header">連線中</div>
   <div id="match-message">
     <img src="loading.gif">
-    <div id="match-info" class="short-info message">
-      <span class="">房間ID:&nbsp;</span>
-      <a href="" target=_blank" id="match-room-link">placeholder</a>
+    <div id="match-info" class="short-info">
+      <div>只能從房間網址進入:</div>
+      <a href="" target=_blank" id="match-room-link">
+        <span id="match-room-id">placeholderA</span>
+      </a>
     </div>
   </div>
   <div class="dialog-footer">
@@ -214,7 +216,7 @@
   </div>
 </div>
 <div id="page-main" class="page">
-  <div id="room" class="button short-info message" title="離開房間">
+  <div id="room" class="button short-info" title="離開房間">
     <span class="">❌</span>
     <span class="">房間ID:&nbsp;</span>
     <span id="room-id">placeholder</span>
@@ -325,6 +327,7 @@
   <string id="no-room">沒有這個房間 {roomId}</string>
   <string id="no-room-match">沒有找到合適房間,太苦了</string>
   <string id="timeout">對方已經 {waitedTime} 秒沒有回應,要繼續嗎?</string>
+  <string id="kick-timeout">對方已經 {waitedTime} 秒沒有回應,要踢嗎?</string>
   <string id="wait">連線中...</string>
   <string id="place-less-power">你不夠大</string>
   <string id="place-same-color">不可以吃自己棋子</string>

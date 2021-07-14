@@ -73,7 +73,7 @@ View.prototype.initNavMatchEvents = function () {
   }
 
   const newGame = document.getElementById('new-game');
-  newGame.addEventListener('click', () => this.sessionManager.acceptOtherPlayer());
+  newGame.addEventListener('click', () => this.sessionManager.continueRoom());
 }
 
 View.prototype.initNavEvents = function () {

@@ -50,11 +50,11 @@ export class SessionManager {
     }
   }
 
-  async acceptOtherPlayer() {
+  async continueRoom() {
     assert(this.current);
 
     try {
-      await this.current.acceptOtherPlayer();
+      await this.current.continueRoom();
     } catch (e) {
       await this.setCurrent();
       if (e instanceof CancelPromiseError) {

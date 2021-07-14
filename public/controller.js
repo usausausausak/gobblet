@@ -187,7 +187,7 @@ export class Contoller {
     await this.onGameLeaved();
   }
 
-  async acceptOtherPlayer() {
+  async continueRoom() {
     assert(!this.running);
     this.manager.room.assertRoomStopping();
     assert(this.manager.room.room.myPrivateRoom);
@@ -196,7 +196,7 @@ export class Contoller {
       this.running    = true;
       this.suspending = true;
 
-      console.info('[ new session ] reuse room:', this.manager.room.room);
+      console.info('[ new session ] continue private room:', this.manager.room.room);
 
       await this.manager.room.updateRoom();
       await this.onMatchingInfo(this.manager.room.room);
@@ -288,7 +288,7 @@ export class Contoller {
       } else if (e instanceof LeaveRoomError) {
         await this.leaveRoom();
       } else if (e instanceof TimeoutError) {
-        await this.continueTimeout(e.waitedTime);
+        await this.oppositeTimeout(e.waitedTime);
       } else if (e instanceof LeaveException) {
         await this.someoneLeaved(e.color);
       } else if (e instanceof WaitTimeoutException) {
@@ -341,15 +341,39 @@ export class Contoller {
     await this.onGameLeaved();
   }
 
+  async oppositeTimeout(waitedTime) {
+    assertNot(this.myTurn);
+
+    const continuePromise = (this.game.room.myPrivateRoom)
+      ? this.kickTimeout(waitedTime) : this.continueTimeout(waitedTime);
+
+    await continuePromise;
+  }
+
   async continueTimeout(waitedTime) {
-    const playerCtrl = (this.myTurn) ? this.me : this.islander;
     const iContinue = await this.onConfirm('timeout', { waitedTime: waitedTime / 1000 });
-    if (iContinue) {
-      // pass
-    } else {
-      console.warn('[', this.game.room.id, '] player:', playerCtrl.player.color, 'is timeout');
+
+    if (!iContinue) {
+      console.warn('[', this.game.room.id, '] player:', this.islander.color, 'is timeout');
 
       await this.leaveRoom('wait-timeout');
+    }
+  }
+
+  async kickTimeout(waitedTime) {
+    const iKick = await this.onConfirm('kick-timeout', { waitedTime: waitedTime / 1000 });
+
+    if (iKick) {
+      console.warn('[', this.game.room.id, '] player:', this.me.player.color, 'is timeout');
+
+      const exception = {
+        exception: 'wait-timeout',
+        color: this.me.player.color,
+      };
+      await this.manager.room.endRoomWithException(exception);
+
+      await this.drop();
+      await this.onGameInterrupted(this.me.player.color, this.me.player.color);
     }
   }
 
