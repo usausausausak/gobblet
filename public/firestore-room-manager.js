@@ -130,8 +130,7 @@ class RemoteRoomManager {
     const closeTime = new Date(Date.now() - autoCloseTimeSecond * 1000);
 
     const roomsRef = this.db.collection('public');
-    const roomQuery = roomsRef.limit(1)
-      .where('createTime', '>', closeTime)
+    const roomQuery = roomsRef.orderBy('createTime', 'desc').limit(10)
       .where('endTime', '==', null)
       .where('joinTime', '==', null);
     const roomSnapshot = await roomQuery.get();
@@ -141,7 +140,18 @@ class RemoteRoomManager {
       return undefined;
     }
 
-    const roomDoc = roomSnapshot.docs[0];
+    let roomDoc = undefined;
+    for (let doc of roomSnapshot.docs) {
+      console.log('found:', {...doc.data()});
+      const createTime = doc.get('createTime').toDate();
+      console.log(createTime, '>', closeTime)
+      if (createTime > closeTime) {
+        roomDoc = doc;
+        break;
+      }
+    }
+
+    //const roomDoc = roomSnapshot.docs[0];
 
     this.roomRef = roomDoc.ref;
     console.info('{', this.roomRef.id, '} room found');
