@@ -6,7 +6,7 @@ import {
 import { assert, assertNot, randomId, vaildId, delay, TimeoutError, timeout } from './util.js';
 
 class RemotePlayerManager {
-  constructor(stepsRef, db, listener, timeoutSecond = 60) {
+  constructor(stepsRef, db, listener, timeoutSecond = 90) {
     this.stepsRef = stepsRef;
     this.timeoutTime = timeoutSecond * 1000;
 
@@ -125,12 +125,12 @@ class RemoteRoomManager {
     preferSetting.privateRoom = false;
 
     // TODO: do not compare server time and local time.
-    const autoCloseTimeSecond = 90;
+    const autoCloseTimeSecond = 150;
     const nowTime = firebase.firestore.Timestamp.now();
     const closeTime = new Date(Date.now() - autoCloseTimeSecond * 1000);
 
     const roomsRef = this.db.collection('public');
-    const roomQuery = roomsRef.orderBy('createTime', 'desc').limit(10)
+    const roomQuery = roomsRef.orderBy('createTime', 'desc').limit(1)
       .where('endTime', '==', null)
       .where('joinTime', '==', null);
     const roomSnapshot = await roomQuery.get();
@@ -140,18 +140,13 @@ class RemoteRoomManager {
       return undefined;
     }
 
-    let roomDoc = undefined;
-    for (let doc of roomSnapshot.docs) {
-      console.log('found:', {...doc.data()});
-      const createTime = doc.get('createTime').toDate();
-      console.log(createTime, '>', closeTime)
-      if (createTime > closeTime) {
-        roomDoc = doc;
-        break;
-      }
+    const roomDoc = roomSnapshot.docs[0];
+    const createTime = roomDoc.get('createTime').toDate();
+    console.log(createTime, '>', closeTime)
+    if (createTime < closeTime) {
+      console.log('{ manager } a abndoned room found, ignore.');
+      return undefined;
     }
-
-    //const roomDoc = roomSnapshot.docs[0];
 
     this.roomRef = roomDoc.ref;
     console.info('{', this.roomRef.id, '} room found');

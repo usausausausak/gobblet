@@ -358,7 +358,7 @@ export class Contoller {
     const iContinue = await this.onConfirm('timeout', { waitedTime: waitedTime / 1000 });
 
     if (!iContinue) {
-      console.warn('[', this.game.room.id, '] player:', this.islander.color, 'is timeout');
+      console.warn('[', this.game.room.id, '] player:', this.islander.player.color, 'is timeout');
 
       await this.leaveRoom('wait-timeout');
     }
